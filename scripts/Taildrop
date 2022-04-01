@@ -1,3 +1,5 @@
 #!/bin/sh
 
-$HOME/.local/share/nautilus/scripts/taildrop -filename "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS}"
+CURDIR=$(dirname "$0")
+
+$CURDIR/.bin/taildrop -filename "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS}"
