@@ -5,13 +5,20 @@ import (
 	"flag"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gen2brain/dlgs"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/tailcfg"
 )
 
-var filename = flag.String("filename", "", "File to push via Taildrop")
+const DefaultTimeout = 10 * time.Second
+
+// CLI args
+var (
+	filename       = flag.String("filename", "", "File to push via Taildrop")
+	tailnetTimeout = flag.Duration("timeout", DefaultTimeout, "Timeout duration for Tailnet interactions")
+)
 
 func getTargets(ctx context.Context) (map[string]*tailcfg.Node, error) {
 	targets := make(map[string]*tailcfg.Node)
@@ -41,7 +48,10 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
-	targets, err := getTargets(ctx)
+
+	sctx, cancelFn := context.WithTimeout(ctx, *tailnetTimeout)
+	defer cancelFn()
+	targets, err := getTargets(sctx)
 	if err != nil {
 		dlgs.Error("Failed to Taildrop file", err.Error())
 		panic(err)
@@ -61,8 +71,9 @@ func main() {
 		panic("Didn't succeed")
 	}
 
-	selectedNode := targets[selection]
-	err = pushFile(ctx, selectedNode, strings.TrimSpace(*filename))
+	pctx, cancelFn := context.WithTimeout(ctx, *tailnetTimeout)
+	defer cancelFn()
+	err = pushFile(pctx, targets[selection], strings.TrimSpace(*filename))
 	if err != nil {
 		dlgs.Error("Failed to Taildrop file", err.Error())
 		panic(err)
